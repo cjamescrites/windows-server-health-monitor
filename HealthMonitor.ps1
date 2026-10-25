@@ -1,7 +1,7 @@
 [CmdletBinding()]
 param(
     [string[]]$ServiceName = @("EventLog", "Schedule"),
-    [ValidateRange(1, 100)] [int]$DiskWarningPercentFree = 15,
+    [ValidateRange(1, 100)] [int]$DiskWarningPercentFree = 20,
     [ValidateRange(1, 168)] [int]$LookbackHours = 24,
     [switch]$NoRun
 )
@@ -38,7 +38,7 @@ function Get-ServiceHealth {
 
 function Get-DiskHealth {
     [CmdletBinding()]
-    param([ValidateRange(1, 100)][int]$WarningPercentFree = 15)
+    param([ValidateRange(1, 100)][int]$WarningPercentFree = 20)
 
     try {
         $disks = Get-CimInstance -ClassName Win32_LogicalDisk -Filter "DriveType=3" -ErrorAction Stop
@@ -104,7 +104,7 @@ function Invoke-HealthCheck {
     [CmdletBinding()]
     param(
         [string[]]$Services = @("EventLog", "Schedule"),
-        [ValidateRange(1, 100)][int]$WarningPercentFree = 15,
+        [ValidateRange(1, 100)][int]$WarningPercentFree = 20,
         [ValidateRange(1, 168)][int]$Hours = 24
     )
 
