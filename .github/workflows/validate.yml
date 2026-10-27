@@ -1,31 +1,44 @@
+# Validate the PowerShell script and tests on pull requests and pushes to main.
 name: Validate Windows Server Health Monitor
 
 on:
+  # Run CI for every pull request so proposed changes are checked before merging.
   pull_request:
-  push:
-    branches: [ main ]
 
+  # Run CI after changes are pushed or merged into the main branch.
+  push:
+    branches:
+      - main
+
+# This workflow only checks code; it does not deploy. Grant read-only repository access.
 permissions:
   contents: read
 
 jobs:
   test:
+    # Use a Windows runner because the script queries Windows-specific services and disks.
     runs-on: windows-latest
+
     steps:
+      # Check out the repository into the temporary GitHub-hosted runner.
       - name: Check out repository
         uses: actions/checkout@v4
 
-      - name: Set up PowerShell
+      # Display the PowerShell version available on the runner for troubleshooting.
+      - name: Show PowerShell version
         shell: pwsh
         run: |
           $PSVersionTable.PSVersion
 
+      # Install Pester 5 or newer; the tests use the modern Pester test framework.
       - name: Install Pester
         shell: pwsh
         run: |
           Install-Module Pester -MinimumVersion 5.0.0 -Scope CurrentUser -Force -SkipPublisherCheck
-          Import-Module Pester -MinimumVersion 5.0.0
+          Import-Module Pester -MinimumVersion 5.0.0 -Force
+          Get-Module Pester
 
+      # Parse the script without running it. Any syntax error fails this workflow step.
       - name: Validate PowerShell syntax
         shell: pwsh
         run: |
@@ -44,11 +57,18 @@ jobs:
 
           Write-Host "PowerShell syntax is valid."
 
+      # Run the mocked Pester tests. Explicitly exit with failure if any test fails.
       - name: Run automated tests
         shell: pwsh
         run: |
-          Import-Module Pester -MinimumVersion 5.0.0
+          Import-Module Pester -MinimumVersion 5.0.0 -Force
+
+          # -PassThru returns test results so the workflow can inspect the failure count.
           $result = Invoke-Pester ./tests/HealthMonitor.Tests.ps1 -PassThru
+
           if ($result.FailedCount -gt 0) {
+            Write-Error "$($result.FailedCount) Pester test(s) failed."
             exit 1
           }
+
+          Write-Host "All Pester tests passed."
